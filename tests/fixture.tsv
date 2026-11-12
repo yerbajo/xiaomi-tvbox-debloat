@@ -1,0 +1,18 @@
+# Package state of a stock Mi Box S (MIBOX4) as seen by the stub adb.
+# Two of the managed packages are absent on purpose: the script must skip them.
+enabled	com.mitv.tvhome.michannel
+enabled	com.mitv.milinkservice
+enabled	com.mitv.videoplayer
+enabled	com.mitv.tvhome.atv
+enabled	com.google.android.tvlauncher
+enabled	com.xiaomi.android.tvsetup.partnercustomizer
+enabled	com.google.android.videos
+enabled	com.miui.tv.analytics
+enabled	tv.alphonso.alphonso_eula
+enabled	com.xm.webcontent
+enabled	com.google.android.tv.bugreportsender
+enabled	com.google.android.tvrecommendations
+enabled	android.autoinstalls.config.xioami.mibox3
+enabled	com.mitv.tvhome.mitvplus
+enabled	com.xiaomi.mitv.updateservice
+enabled	com.mitv.download.service

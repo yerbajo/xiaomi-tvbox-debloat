@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Fake `adb` for tests/run-tests.sh. Models just enough of the device surface
+# to exercise the debloat script without a real Mi Box.
+#
+# State lives in $STUB_STATE, one "<state>\t<package>" line per installed
+# package, state being enabled or disabled. Every invocation is appended to
+# $STUB_LOG.
+
+set -uo pipefail
+
+state_file=${STUB_STATE:?STUB_STATE must be set}
+printf '%s\n' "$*" >>"${STUB_LOG:-/dev/null}"
+
+args=("$@")
+if [ "${args[0]:-}" = "-s" ]; then
+	args=("${args[@]:2}")
+fi
+
+rewrite_state() { # package new-state
+	awk -F'\t' -v p="$1" -v n="$2" 'BEGIN { OFS = "\t" } $2 == p { $1 = n } { print }' \
+		"$state_file" >"$state_file.tmp" && mv "$state_file.tmp" "$state_file"
+}
+
+has_package() {
+	awk -F'\t' -v p="$1" '$2 == p { found = 1 } END { exit !found }' "$state_file"
+}
+
+list_by_state() {
+	awk -F'\t' -v s="$1" '$1 == s { print "package:" $2 }' "$state_file"
+}
+
+case ${args[0]:-} in
+	get-state)
+		if [ -s "$state_file" ]; then
+			echo device
+		else
+			echo unknown
+			exit 1
+		fi
+		;;
+	shell)
+		rest=("${args[@]:1}")
+		case ${rest[0]:-} in
+			getprop)
+				echo "stub-fingerprint/MIBOX4/stub"
+				;;
+			pm)
+				case ${rest[1]:-} in
+					list)
+						for flag in "${rest[@]:2}"; do
+							case $flag in
+								-e) list_by_state enabled; exit 0 ;;
+								-d) list_by_state disabled; exit 0 ;;
+							esac
+						done
+						exit 1
+						;;
+					disable-user)
+						pkg=${rest[4]:-}
+						has_package "$pkg" || { echo "Error: unknown package: $pkg" >&2; exit 255; }
+						rewrite_state "$pkg" disabled
+						echo "Package $pkg new state: disabled-user"
+						;;
+					enable)
+						pkg=${rest[2]:-}
+						has_package "$pkg" || { echo "Error: unknown package: $pkg" >&2; exit 255; }
+						rewrite_state "$pkg" enabled
+						echo "Package $pkg new state: enabled"
+						;;
+					*) exit 1 ;;
+				esac
+				;;
+			*) exit 1 ;;
+		esac
+		;;
+	*)
+		echo "stub-adb: unsupported invocation: $*" >&2
+		exit 1
+		;;
+esac
